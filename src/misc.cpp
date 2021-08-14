@@ -47,19 +47,25 @@ SOCKET connect_host(string ip, string port) {
 }
 
 void saveFile(SOCKET sock) {
-    ofstream f("ghostcat.txt");
+    FILE* f = fopen("ghostcat.txt", "w");
     char buf[500];
     bool started = false;
 
+    timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(timeval));
+
     while (1) {
         DWORD bytes = recv(sock, buf, 500, NULL);
-        f << string(buf).substr(0, bytes);
-        if (bytes == 500) {
-            started = true;
-        }
-        else if (bytes < 500 && started) {
-            f.close();
+        if (bytes == -1 && started) {
+            fclose(f);
             return;
+        }
+        if (bytes != -1){
+            fwrite(buf, 1, bytes, f);
+            started = true;
         }
     }
 }
